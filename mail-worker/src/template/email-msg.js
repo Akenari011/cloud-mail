@@ -25,10 +25,15 @@ function truncateText(text, maxLength) {
 export default function emailMsgTemplate(email) {
 	const fromName = escapeHtml(email.name || '');
 	const fromEmail = escapeHtml(email.sendEmail || '');
-	const fromLine = fromEmail ? fromName + ' <' + fromEmail + '>' : fromName;
+	const fromLine = fromEmail ? fromName + ' &lt;' + fromEmail + '&gt;' : fromName;
 	const time = escapeHtml(email.createTime || '');
 
-	let template = '<b>' + escapeHtml(email.subject || '') + '</b>' + '\n发件人：' + fromLine;
+	const code = escapeHtml(email.code || '');
+	let template = '';
+	if (code) {
+		template += '验证码：<b>' + code + '</b>\n';
+	}
+	template += '<b>' + escapeHtml(email.subject || '') + '</b>' + '\n发件人：' + fromLine;
 
 	if (time) {
 		template += '\n时间：' + time;
