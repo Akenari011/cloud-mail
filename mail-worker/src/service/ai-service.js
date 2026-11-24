@@ -1,7 +1,7 @@
 import emailUtils from '../utils/email-utils';
 import { settingConst } from '../const/entity-const';
 
-const CODE_KEYWORD_REGEX = /(验证码|校验码|认证码|动态码|登录码|确认码|激活码|安全码|验证|verification|verify|\botp\b|one[\s-]?time|passcode|security code|confirmation code|\bcode\b|2fa)/i;
+const CODE_KEYWORD_REGEX = /(验证码|校验码|认证码|动态码|登录码|确认码|激活码|安全码|validation|verification|verify|\botp\b|one[\s-]?time|passcode|security code|confirmation code|\bcode\b|2fa)/i;
 
 function aiText(res) {
 	if (res == null) return '';
@@ -18,20 +18,25 @@ function parseCode(text) {
 	const m = s.match(/"code"\s*:\s*"([^"]{0,8})"/i);
 	return m ? m[1] : '';
 }
+// 本地正则兜底：支持纯数字、字母数字混合码；关键词附近匹配，规避促销码/订单号误抓
 function regexCode(text) {
 	if (!text) return '';
-	// 优先 6 位连续数字（绝大多数验证码）
-	const six = text.match(/\b\d{6}\b/);
-	if (six) return six[0];
-	// 关键词前后 ±40 字符内的 4-8 位数字（排除 19xx/20xx 年份）
-	const kw = /(验证码|校验码|认证码|动态码|登录码|确认码|激活码|安全码|verification\s*code|verify\s*code|security\s*code|confirmation\s*code|\bcode\b|\botp\b|\bpin\b|2fa)/gi;
+	const KW = /(验证码|校验码|认证码|动态码|登录码|确认码|激活码|安全码|verification\s*code|verify\s*code|security\s*code|confirmation\s*code|one[\s-]?time|passcode|\botp\b|\bpin\b|2fa|\bcode\b)/gi;
+	const BAD = /(promo|coupon|discount|referral|gift|voucher|invite|优惠|折扣|促销)/i;
+	const ALNUM = /\b(?=[A-Za-z0-9]*[A-Za-z])(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{4,8}\b/;
+	const DIG = /\b(\d{4,8})\b/;
 	let k;
-	while ((k = kw.exec(text)) !== null) {
-		const seg = text.slice(Math.max(0, k.index - 40), k.index + k[0].length + 40);
-		const d = seg.match(/\b(\d{4,8})\b/);
+	while ((k = KW.exec(text)) !== null) {
+		const pre = text.slice(Math.max(0, k.index - 20), k.index);
+		if (BAD.test(pre)) continue;
+		const seg = text.slice(Math.max(0, k.index - 30), k.index + k[0].length + 30);
+		const a = seg.match(ALNUM);
+		if (a) return a[0];
+		const d = seg.match(DIG);
 		if (d && !/^(19|20)\d{2}$/.test(d[1])) return d[1];
 	}
-	return '';
+	const six = text.match(/\b\d{6}\b/);
+	return six ? six[0] : '';
 }
 
 const aiService = {
@@ -64,7 +69,6 @@ const aiService = {
 		} catch (e) {
 			console.error('验证码提取失败:', e && (e.message || e));
 		}
-		// AI 没结果/报错 → 本地正则兜底
 		if (!code) {
 			code = regexCode(subject) || regexCode(body);
 		}
