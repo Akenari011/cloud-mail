@@ -21,44 +21,18 @@ function truncateText(text, maxLength) {
 	return text.slice(0, maxLength - TRUNCATED_SUFFIX.length) + TRUNCATED_SUFFIX;
 }
 
-export default function emailMsgTemplate(email, tgMsgTo, tgMsgFrom, tgMsgText) {
+// 转发到 Telegram 的消息：只显示 主题 / 发件人 / 时间；正文详情点开小程序 View 查看
+export default function emailMsgTemplate(email) {
+	const fromName = escapeHtml(email.name || '');
+	const fromEmail = escapeHtml(email.sendEmail || '');
+	const fromLine = fromEmail ? fromName + ' <' + fromEmail + '>' : fromName;
+	const time = escapeHtml(email.createTime || '');
 
-	let template = `<b>${escapeHtml(email.subject || '')}</b>`
+	let template = '<b>' + escapeHtml(email.subject || '') + '</b>' + '\n发件人：' + fromLine;
 
-		if (tgMsgFrom === 'only-name') {
-			template += `
-
-From\u200B：${escapeHtml(email.name || '')}`
-		}
-
-		if (tgMsgFrom === 'show') {
-			template += `
-
-From\u200B：${escapeHtml(email.name || '')}  &lt;${escapeHtml(email.sendEmail || '')}&gt;`
-		}
-
-		if(tgMsgTo === 'show' && tgMsgFrom === 'hide') {
-			template += `
-
-To：\u200B${escapeHtml(email.toEmail || '')}`
-
-		} else if(tgMsgTo === 'show') {
-		template += `
-To：\u200B${escapeHtml(email.toEmail || '')}`
-	}
-
-	const text = escapeHtml(emailUtils.formatText(email.text) || emailUtils.htmlToText(email.content));
-
-	if(tgMsgText === 'show') {
-		const prefix = `${template}
-
-`;
-		const maxTextLength = Math.max(0, TELEGRAM_MESSAGE_LIMIT - prefix.length);
-		template += `
-
-${truncateText(text, maxTextLength)}`
+	if (time) {
+		template += '\n时间：' + time;
 	}
 
 	return template;
-
 }

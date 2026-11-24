@@ -137,7 +137,8 @@ export default function emailHtmlTemplate(html) {
 
             if (childWidth === 0) return;
 
-            const scale = parentWidth / childWidth;
+            // 仅缩小不放大，避免窄内容被放大导致文字重叠
+            const scale = Math.min(1, parentWidth / childWidth);
 
             const hostElement = shadowRoot.host;
             hostElement.style.zoom = scale;
